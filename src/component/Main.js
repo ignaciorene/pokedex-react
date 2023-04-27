@@ -1,38 +1,47 @@
 import React from "react";
-import { useState } from "react";
+import { useState,useEffect } from "react";
+import axios from 'axios'
 
 //Bring data from the Pokemon API
 async function getDataFromApi(id) {
-    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-    const data = await response.json();
-    return data;
+    const response = await axios.get(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    return response.data;
   }
 
-  console.log(getDataFromApi(1))
-
-//function to get image of pokemon
-const getPokemonImg= async (id)=>{
-    let pokemonData= await getDataFromApi(id)
-    return pokemonData.sprites.front_default
-}
-
-//function that gets pokemon name
-const getPokemonName= async (id)=>{
-    let pokemonData= await getDataFromApi(id)
-    return pokemonData.name
-}
-
-//function that gets pokemon type
-const getPokemonType= async (id)=>{
-    let pokemonData= await getDataFromApi(id)
-    let pokemonType=[]
-    pokemonData.types.map((type)=>pokemonType=[...pokemonType,' '+type.type.name])
-    return pokemonType
-}
-
 const Main = ()=>{
-    //State that saves the selected pokemon
-  const [pokemon,setPokemon] = useState([1])
+    //State that saves the selected pokemon/s and data
+  const [pokemon,setPokemon] = useState([])
+
+  //function to show all pokemons
+    const showAllPokemons=()=>{
+        
+        setPokemon([])
+
+        let newPokemonList=[]
+
+        for(let i=1;i<=20;i++){
+            newPokemonList=[...newPokemonList,{id:i}]
+        }
+
+        setPokemon(newPokemonList)
+    }
+
+  //every time the pokemon to show is changed we call the API and save the data
+  useEffect(()=>{
+    async function getPokemonData(){
+        const updatedPokemon = await Promise.all(
+            pokemon.map(async (data)=>{
+                const pokemonData=await axios.get(`https://pokeapi.co/api/v2/pokemon/${data.id}`);
+                const pokemonImg=pokemonData.data.sprites.front_default
+                const pokemonName=pokemonData.data.name
+                const pokemonType=pokemonData.data.types
+                return {...data,img:pokemonImg, name:pokemonName,pokemonType}
+            })
+        )
+        setPokemon(updatedPokemon)
+    }
+    getPokemonData()
+  },pokemon)
 
     return(
         <>
@@ -42,18 +51,27 @@ const Main = ()=>{
                 </div>
 
                 <div className="searchbar-container">
-                    <div className="searchbar">Barra de busqueda</div>
+                    <div className="searchbar">
+                    <input type="text" placeholder="Ingrese el nombre del pokemón..."/>
+                    <button className="search-btn">Buscar</button>
+                    <button className="show-all-btn" onClick={()=>showAllPokemons()}>Mostrar todos</button>
+                    </div>
                 </div>
 
                 <div className="content-container">
-                    {pokemon.map((id,index)=>(
-                        <div className="pokemon-card" key={index}>
-                            <img className="pokemon-img" src={getPokemonImg(id)}></img>
-                            <div className="pokemon-name">{getPokemonName(id)}</div>
-                            <div className="pokemon-number">{id}</div>
-                            <div className="pokemon-type">{getPokemonType(id)}</div>
-                        </div>
+                {pokemon?.map((data, index) => (
+                    <div className="pokemon-card" key={index}>
+
+                    <img className="pokemon-img" src={data.img}></img>
+                    <div className="pokemon-name">{data.name}</div>
+                    <div className="pokemon-number">{data.id}</div>
+                    {console.log(data)}
+                    {data.pokemonType?.map((p,index)=>(
+                        <div className="pokemon-type" key={index}>{p.type.name}</div>
                     ))}
+
+                    </div>
+                ))}
                 </div>
             </div>
         </>
